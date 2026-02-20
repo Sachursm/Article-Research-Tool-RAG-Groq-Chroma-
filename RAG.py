@@ -22,6 +22,26 @@ EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 llm = None
 vector_store = None
 
+from langchain_core.prompts import PromptTemplate
+
+CUSTOM_PROMPT = PromptTemplate(
+    input_variables=["context", "question"],
+    template="""
+You are a helpful real-estate research assistant.
+
+Use ONLY the information from the article below to answer the question.
+If the answer is not present, say you don't know.
+
+Article
+=======
+{context}
+
+Question: {question}
+
+Answer:
+"""
+)
+
 
 def initialize_components():
 
@@ -110,7 +130,8 @@ def generate_answer(query):
         raise RuntimeError('vector database is not initialized')
      
     chain = RetrievalQAWithSourcesChain.from_llm(llm = llm,
-             retriever = vector_store.as_retriever())
+             retriever = vector_store.as_retriever(),
+             prompt=CUSTOM_PROMPT)
 
     result = chain.invoke({'question': query}, return_only_outputs = True)
     sources = result.get("sources", "")
