@@ -6,6 +6,10 @@ from langchain_chroma import Chroma
 from langchain_groq import ChatGroq
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from uuid import uuid4
+from langchain_classic.chains import RetrievalQAWithSourcesChain
+
+
+
 
 load_dotenv()
 
@@ -98,6 +102,20 @@ def process_urls(urls):
 
     print(f"Stored {len(docs)} chunks")
 
+def generate_answer(query):
+    """
+    Create RetrievalQA chain using Groq LLM and Chroma retriever.
+    """
+    if not vector_store:
+        raise RuntimeError('vector database is not initialized')
+     
+    chain = RetrievalQAWithSourcesChain.from_llm(llm = llm,
+             retriever = vector_store.as_retriever())
+
+    result = chain.invoke({'question': query}, return_only_outputs = True)
+    sources = result.get("sources", "")
+    return result['answer'], sources
+
 
 if __name__ == "__main__":
     urls = [
@@ -105,11 +123,15 @@ if __name__ == "__main__":
     ]
     process_urls(urls)
     
-    results = vector_store.similarity_search(
-    "How do Federal Reserve interest rates affect mortgages?",
-    k=3
-    )
+    # results = vector_store.similarity_search(
+    # "How do Federal Reserve interest rates affect mortgages?",
+    # k=3
+    # )
 
-    for doc in results:
-        print(doc.page_content[:300])
-        print("-----")
+    # for doc in results:
+    #     print(doc.page_content[:300])
+    #     print("-----")
+    
+    answer, sources = generate_answer("How do Federal Reserve interest rates affect mortgages? ")
+    print(f"Answer: {answer}")
+    print(f"Sources: {sources}")
