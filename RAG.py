@@ -40,7 +40,7 @@ def initialize_components():
 
     if llm is None:
         llm = ChatGroq(
-            model="openai/gpt-oss-120b",
+            model="llama-3.3-70b-versatile",
             temperature=0.3
         )
 
@@ -118,20 +118,21 @@ def generate_answer(query):
 
 
 if __name__ == "__main__":
-    urls = [
-        "https://www.cnbc.com/2024/12/21/how-the-federal-reserves-rate-policy-affects-mortgages.html"
-    ]
-    process_urls(urls)
+    pass
+    # urls = [
+    #     "https://www.cnbc.com/2024/12/21/how-the-federal-reserves-rate-policy-affects-mortgages.html"
+    # ]
+    # process_urls(urls)
     
-    # results = vector_store.similarity_search(
-    # "How do Federal Reserve interest rates affect mortgages?",
-    # k=3
-    # )
+    # # results = vector_store.similarity_search(
+    # # "How do Federal Reserve interest rates affect mortgages?",
+    # # k=3
+    # # )
 
-    # for doc in results:
-    #     print(doc.page_content[:300])
-    #     print("-----")
+    # # for doc in results:
+    # #     print(doc.page_content[:300])
+    # #     print("-----")
     
-    answer, sources = generate_answer("How do Federal Reserve interest rates affect mortgages? ")
-    print(f"Answer: {answer}")
-    print(f"Sources: {sources}")
+    # answer, sources = generate_answer("How do Federal Reserve interest rates affect mortgages? ")
+    # print(f"Answer: {answer}")
+    # print(f"Sources: {sources}")
