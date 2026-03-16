@@ -8,9 +8,7 @@ except Exception as e:
     st.error(f"RAG import failed: {e}")
     st.stop()
 
-# =========================
 # Session State Init
-# =========================
 defaults = {
     "urls_processed": False,
     "processing": False,
@@ -19,23 +17,19 @@ defaults = {
     "url1": "",
     "url2": "",
     "url3": "",
-    "answer": None,       # ✅ persist answer
-    "sources": None,      # ✅ persist sources
+    "answer": None,
+    "sources": None,
+    "llm": None,           # ✅ persist LLM
+    "vector_store": None,  # ✅ persist vector store
 }
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-# =========================
-# Title
-# =========================
 st.title("🏢 RealEstate Research Tool")
 
 col1, col2 = st.columns([1, 2])
 
-# =========================
-# LEFT PANEL
-# =========================
 with col1:
     st.subheader("News Article URLs")
 
@@ -53,8 +47,10 @@ with col1:
             st.session_state.urls_processed = False
             st.session_state.logs = []
             st.session_state.urls_to_process = urls
-            st.session_state.answer = None    # ✅ clear previous answer
-            st.session_state.sources = None   # ✅ clear previous sources
+            st.session_state.answer = None
+            st.session_state.sources = None
+            st.session_state.llm = None           # ✅ clear old components
+            st.session_state.vector_store = None  # ✅ clear old components
             st.rerun()
 
     if st.button("Remove URLs"):
@@ -67,14 +63,12 @@ with col1:
         st.session_state.urls_to_process = []
         st.session_state.answer = None
         st.session_state.sources = None
+        st.session_state.llm = None
+        st.session_state.vector_store = None
         st.rerun()
 
-# =========================
-# RIGHT PANEL
-# =========================
 with col2:
 
-    # ── Processing in progress ──
     if st.session_state.processing:
         st.subheader("⚙️ Processing Logs")
 
@@ -91,13 +85,16 @@ with col2:
             for step in steps:
                 st.session_state.logs.append(step)
                 log_box.markdown("\n\n".join(st.session_state.logs))
-            process_urls(st.session_state.urls_to_process)
+
+            # ✅ Capture returned components into session state
+            llm, vector_store = process_urls(st.session_state.urls_to_process)
+            st.session_state.llm = llm
+            st.session_state.vector_store = vector_store
 
         st.session_state.processing = False
         st.session_state.urls_processed = True
         st.rerun()
 
-    # ── Ready to answer questions ──
     elif st.session_state.urls_processed:
         st.success("✅ URLs processed! Ask your question below.")
         st.subheader("Ask a Question")
@@ -109,12 +106,15 @@ with col2:
                 st.warning("Please enter a question.")
             else:
                 with st.spinner("Generating answer..."):
-                    answer, sources = generate_answer(question)
-                    # ✅ Save to session state so they persist on rerun
+                    # ✅ Pass components from session state
+                    answer, sources = generate_answer(
+                        question,
+                        st.session_state.llm,
+                        st.session_state.vector_store
+                    )
                     st.session_state.answer = answer
                     st.session_state.sources = sources
 
-        # ✅ Display persisted answer/sources OUTSIDE the button block
         if st.session_state.answer:
             st.subheader("Answer")
             st.write(st.session_state.answer)
@@ -128,6 +128,5 @@ with col2:
             else:
                 st.info("No sources found.")
 
-    # ── Idle state ──
     else:
         st.info("👈 Enter URLs on the left and click **Process URLs** to begin.")
