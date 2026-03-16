@@ -129,6 +129,19 @@ Open your browser at: **http://localhost:8501**
 
 ---
 
+## 📸 Screenshots
+
+### 🖥️ Front UI
+![Front UI](assets/front_ui.png)
+
+### ⚙️ Processing UI
+![Processing UI](assets/processing_ui.png)
+
+### ✅ Output UI
+![Output UI](assets/output_ui.png)
+
+---
+
 ## 📖 How to Use
 
 1. **Enter URLs** — Paste one or more real-estate news article URLs into the sidebar
