@@ -132,13 +132,13 @@ Open your browser at: **http://localhost:8501**
 ## 📸 Screenshots
 
 ### 🖥️ Front UI
-![Front UI](assets/front_ui.png)
+![Front UI](https://github.com/Sachursm/RealEstate-Research-Tool-RAG-Groq-Chroma-/blob/e135edf52739a4e90045bffcb2f94f13b3127b23/images/font_ui.png)
 
 ### ⚙️ Processing UI
-![Processing UI](assets/processing_ui.png)
+![Processing UI](https://github.com/Sachursm/RealEstate-Research-Tool-RAG-Groq-Chroma-/blob/e135edf52739a4e90045bffcb2f94f13b3127b23/images/processing_ui.png)
 
 ### ✅ Output UI
-![Output UI](assets/output_ui.png)
+![Output UI](https://github.com/Sachursm/RealEstate-Research-Tool-RAG-Groq-Chroma-/blob/e135edf52739a4e90045bffcb2f94f13b3127b23/images/output_ui.png)
 
 ---
 
