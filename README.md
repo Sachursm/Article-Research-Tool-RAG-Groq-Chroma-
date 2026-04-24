@@ -55,7 +55,9 @@ URLs Provided by User
 
 ### 🔵 Ingestion Pipeline
 
-![Ingestion Pipeline](images/ingestion_pipeline.png)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Sachursm/RealEstate-Research-Tool-RAG-Groq-Chroma-/4ce9117d7d44d49dddb579b054e8f662d2844c0c/digram/rag_architecture.jpg" width="500">
+</p>
 
 ---
 
@@ -137,13 +139,13 @@ Open your browser at: **http://localhost:8501**
 ## 📸 Screenshots
 
 ### 🖥️ Front UI
-![Front UI](https://github.com/Sachursm/RealEstate-Research-Tool-RAG-Groq-Chroma-/blob/e135edf52739a4e90045bffcb2f94f13b3127b23/images/font_ui.png)
+![Front UI](https://github.com/Sachursm/RealEstate-Research-Tool-RAG-Groq-Chroma-/blob/4ce9117d7d44d49dddb579b054e8f662d2844c0c/images/font_ui.png)
 
 ### ⚙️ Processing UI
-![Processing UI](https://github.com/Sachursm/RealEstate-Research-Tool-RAG-Groq-Chroma-/blob/e135edf52739a4e90045bffcb2f94f13b3127b23/images/processing_ui.png)
+![Processing UI](https://github.com/Sachursm/RealEstate-Research-Tool-RAG-Groq-Chroma-/blob/4ce9117d7d44d49dddb579b054e8f662d2844c0c/images/processing_ui.png)
 
 ### ✅ Output UI
-![Output UI](https://github.com/Sachursm/RealEstate-Research-Tool-RAG-Groq-Chroma-/blob/e135edf52739a4e90045bffcb2f94f13b3127b23/images/output_ui.png)
+![Output UI](https://github.com/Sachursm/RealEstate-Research-Tool-RAG-Groq-Chroma-/blob/4ce9117d7d44d49dddb579b054e8f662d2844c0c/images/output_ui.png)
 
 ---
 
