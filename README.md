@@ -1,4 +1,4 @@
-# 🏢 RealEstate Research Tool
+# 📰 Article Research Tool
 
 > A Retrieval-Augmented Generation (RAG) web application that ingests real-estate news articles from URLs and enables grounded question-answering using Groq's Llama-3.3-70B and a local Chroma vector database — all through a clean Streamlit interface.
 
@@ -51,6 +51,11 @@ URLs Provided by User
                           ▼
               Answer + Source Citations
 ```
+## 🏗️ System Architecture
+
+### 🔵 Ingestion Pipeline
+
+![Ingestion Pipeline](images/ingestion_pipeline.png)
 
 ---
 
@@ -150,16 +155,24 @@ Open your browser at: **http://localhost:8501**
 4. **Get Answers** — Receive grounded answers with source citations from the ingested articles
 
 ---
+## 🔗 Reference Article
 
-## 🧠 Example Questions
+### Understanding the Repo Rate and Its Impact on Home Loans
 
-```
-How do Federal Reserve policies affect mortgage rates?
-Why did mortgage rates rise despite the Fed cutting rates?
-What factors are currently driving housing affordability issues?
-Which cities are seeing the highest real estate price growth?
-What is the outlook for commercial real estate in 2025?
-```
+![Repo Rate Concept](https://www.pnbhousing.com/blog/wp-content/uploads/2023/08/repo-rate-impact-home-loan.jpg)
+
+Source: https://www.pnbhousing.com/blog/understanding-the-repo-rate-and-its-impact-on-home-loans
+
+---
+
+## ❓ Basic Understanding Questions
+
+1. What is the repo rate set by the Reserve Bank of India and why is it important?  
+2. How does a change in repo rate affect home loan interest rates?  
+3. What is the difference between fixed-rate and floating-rate home loans?  
+4. Why don’t home loan rates change immediately after RBI changes the repo rate?  
+
+---
 
 ---
 
