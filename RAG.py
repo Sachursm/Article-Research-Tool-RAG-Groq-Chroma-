@@ -13,19 +13,19 @@ load_dotenv()
 
 # Constants
 CHUNK_SIZE = 1000
-COLLECTION_NAME = "real_estate_collection"
+COLLECTION_NAME = "article_research_collection"
 VECTORSTORE_DIR = Path(__file__).parent / "resources" / "vectorstore"
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 CUSTOM_PROMPT = PromptTemplate(
     input_variables=["context", "question"],
     template="""
-You are a helpful real-estate research assistant.
+You are a helpful article research assistant.
 
 Use ONLY the information from the article below to answer the question.
 If the answer is not present, say you don't know.
 
-Article
+Context
 =======
 {context}
 
