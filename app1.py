@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.set_page_config(page_title="RealEstate Research Tool", layout="wide")
+st.set_page_config(page_title="Article Research Tool", layout="wide")
 
 try:
     from RAG import process_urls, generate_answer
@@ -26,12 +26,12 @@ for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-st.title("🏢 RealEstate Research Tool")
+st.title("📰 Article Research Tool")
 
 col1, col2 = st.columns([1, 2])
 
 with col1:
-    st.subheader("News Article URLs")
+    st.subheader("Article URLs")
 
     url1 = st.text_input("URL 1", key="url1")
     url2 = st.text_input("URL 2", key="url2")
