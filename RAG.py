@@ -17,6 +17,7 @@ COLLECTION_NAME = "article_research_collection"
 VECTORSTORE_DIR = Path(__file__).parent / "resources" / "vectorstore"
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
+#custom prompt for answer generation
 CUSTOM_PROMPT = PromptTemplate(
     input_variables=["context", "question"],
     template="""
@@ -34,6 +35,37 @@ Question: {question}
 Answer:
 """
 )
+
+#specialized prompt for summarization tasks
+SUMMARY_PROMPT = PromptTemplate(
+    input_variables=["context"],
+    template="""
+You are a helpful article research assistant.
+
+Provide a clear and structured summary
+of the article below.
+
+Include:
+1. Main topic
+2. Key points
+3. Important insights
+4. Final takeaway
+
+Article:
+{context}
+
+Summary:
+"""
+)
+
+SUMMARY_KEYWORDS = [
+    "summary",
+    "summarize",
+    "overview",
+    "main points",
+    "key points",
+]
+
 
 
 def get_llm():
@@ -83,32 +115,53 @@ def process_urls(urls):
     vector_store.add_documents(docs, ids=uuids)
 
     print(f"Stored {len(docs)} chunks")
-    return llm, vector_store
+    return llm, vector_store, docs
 
 
-def generate_answer(query, llm, vector_store):
+def generate_answer(query, llm, vector_store, docs):
     """
-    Generate answer using RetrievalQA chain with custom prompt.
-    Returns answer string and comma-separated source URLs.
+    Generate answer or summary from article.
     """
+
     if vector_store is None:
         raise RuntimeError("Vector database is not initialized.")
+
     if llm is None:
         raise RuntimeError("LLM is not initialized.")
 
+    # Detect summary requests
+    is_summary = any(
+        word in query.lower()
+        for word in SUMMARY_KEYWORDS
+    )
+
+    # SUMMARY FLOW
+    if is_summary:
+
+        summary = generate_summary(
+            docs,
+            llm
+        )
+
+        return summary, "Summary generated from full article"
+
+    # NORMAL RAG QA FLOW
     chain = RetrievalQA.from_chain_type(
         llm=llm,
-        retriever=vector_store.as_retriever(),
+        retriever=vector_store.as_retriever(
+            search_kwargs={"k": 4}
+        ),
         chain_type="stuff",
         return_source_documents=True,
         chain_type_kwargs={"prompt": CUSTOM_PROMPT}
     )
 
     result = chain.invoke({"query": query})
+
     answer = result["result"]
 
-    # Extract unique source URLs from returned documents
     source_docs = result.get("source_documents", [])
+
     sources = ", ".join(
         set(
             doc.metadata.get("source", "")
@@ -118,6 +171,8 @@ def generate_answer(query, llm, vector_store):
     )
 
     return answer, sources
+
+
 
 
 if __name__ == "__main__":
