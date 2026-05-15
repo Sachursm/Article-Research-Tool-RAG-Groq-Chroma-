@@ -21,6 +21,7 @@ defaults = {
     "sources": None,
     "llm": None,           # ✅ persist LLM
     "vector_store": None,  # ✅ persist vector store
+    "docs": None
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -37,7 +38,10 @@ with col1:
     url2 = st.text_input("URL 2", key="url2")
     url3 = st.text_input("URL 3", key="url3")
 
-    urls = [u for u in [url1, url2, url3] if u.strip()]
+    urls = list(set(
+    u for u in [url1, url2, url3]
+    if u.strip()
+    ))
 
     if st.button("Process URLs"):
         if not urls:
@@ -51,6 +55,7 @@ with col1:
             st.session_state.sources = None
             st.session_state.llm = None           # ✅ clear old components
             st.session_state.vector_store = None  # ✅ clear old components
+            st.session_state.docs = None
             st.rerun()
 
     if st.button("Remove URLs"):
@@ -65,6 +70,7 @@ with col1:
         st.session_state.sources = None
         st.session_state.llm = None
         st.session_state.vector_store = None
+        st.session_state.docs = None
         st.rerun()
 
 with col2:
@@ -87,10 +93,19 @@ with col2:
                 log_box.markdown("\n\n".join(st.session_state.logs))
 
             # ✅ Capture returned components into session state
-            llm, vector_store = process_urls(st.session_state.urls_to_process)
-            st.session_state.llm = llm
-            st.session_state.vector_store = vector_store
+            try:
+                llm, vector_store, docs = process_urls(
+                    st.session_state.urls_to_process
+                )
 
+                st.session_state.llm = llm
+                st.session_state.vector_store = vector_store
+                st.session_state.docs = docs
+
+            except Exception as e:
+                st.error(f"Processing failed: {e}")
+                st.session_state.processing = False
+                st.stop()
         st.session_state.processing = False
         st.session_state.urls_processed = True
         st.rerun()
@@ -107,24 +122,31 @@ with col2:
             else:
                 with st.spinner("Generating answer..."):
                     # ✅ Pass components from session state
-                    answer, sources = generate_answer(
-                        question,
-                        st.session_state.llm,
-                        st.session_state.vector_store
-                    )
-                    st.session_state.answer = answer
-                    st.session_state.sources = sources
+                    try:
+                        answer, sources = generate_answer(
+                            question,
+                            st.session_state.llm,
+                            st.session_state.vector_store,
+                            st.session_state.docs
+                        )
+
+                        st.session_state.answer = answer
+                        st.session_state.sources = sources
+
+                    except Exception as e:
+                        st.error(f"Answer generation failed: {e}")
+                    
 
         if st.session_state.answer:
             st.subheader("Answer")
-            st.write(st.session_state.answer)
+            st.markdown(st.session_state.answer)
 
             st.subheader("Sources")
             sources = st.session_state.sources
             if sources and sources.strip():
                 source_list = [s.strip() for s in sources.split(",") if s.strip()]
                 for i, url in enumerate(source_list, 1):
-                    st.markdown(f"{i}. {url}")
+                    st.markdown(f"{i}. [{url}]({url})")
             else:
                 st.info("No sources found.")
 
