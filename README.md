@@ -1,3 +1,14 @@
+---
+title: Article Research Tool
+emoji: 📰
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 8501
+pinned: false
+---
+
+
 # 📰 Article Research Tool
 
 > A Retrieval-Augmented Generation (RAG) web application that ingests real-estate news articles from URLs and enables grounded question-answering using Groq's Llama-3.3-70B and a local Chroma vector database — all through a clean Streamlit interface.
