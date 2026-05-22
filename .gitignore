@@ -1,7 +1,10 @@
-venv/
 .env
+venv/
 __pycache__/
 *.pyc
-*.pyo
 resources/
-resources/vectorstore/
+images/
+digram/
+*.bin
+*.sqlite3
+EOF
