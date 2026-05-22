@@ -8,14 +8,14 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_classic.chains import RetrievalQA
 from langchain_core.prompts import PromptTemplate
 from uuid import uuid4
-from langchain_core.document import Document
-from playwright.sync_api import sync_playwright
+from langchain_core.documents import Document
+from playwright.async_api import async_playwright
 import asyncio
 
 load_dotenv()
 
 # Constants
-CHUNK_SIZE = 1000
+CHUNK_SIZE = 500
 COLLECTION_NAME = "article_research_collection"
 VECTORSTORE_DIR = Path(__file__).parent / "resources" / "vectorstore"
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
@@ -83,6 +83,14 @@ def get_vector_store():
         embedding_function=embeddings,
     )
 
+def generate_summary(docs, llm):
+    context = "\n\n".join(
+        doc.page_content
+        for doc in docs[:15]
+    )
+    formatted_prompt = SUMMARY_PROMPT.format(context=context)
+    response = llm.invoke(formatted_prompt)
+    return response.content
 
 async def scrape_with_playwright(url: str) -> Document:
     async with async_playwright() as p:
@@ -139,7 +147,7 @@ def process_data(document: list):
     text_splitter = RecursiveCharacterTextSplitter(
         separators=["\n\n", "\n", ".", " "],
         chunk_size=CHUNK_SIZE,
-        chunk_overlap=100,
+        chunk_overlap=50,
     )
     docs = text_splitter.split_documents(document)
 
@@ -182,7 +190,7 @@ def generate_answer(query, llm, vector_store, docs):
     chain = RetrievalQA.from_chain_type(
         llm=llm,
         retriever=vector_store.as_retriever(
-            search_kwargs={"k": 4}
+            search_kwargs={"k": 6}
         ),
         chain_type="stuff",
         return_source_documents=True,
