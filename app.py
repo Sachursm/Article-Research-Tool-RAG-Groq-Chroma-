@@ -3,7 +3,7 @@ import streamlit as st
 st.set_page_config(page_title="Article Research Tool", layout="wide")
 
 try:
-    from RAG import process_urls, generate_answer
+    from rag import scrape_urls, process_data, generate_answer
 except Exception as e:
     st.error(f"RAG import failed: {e}")
     st.stop()
@@ -94,10 +94,8 @@ with col2:
 
             # ✅ Capture returned components into session state
             try:
-                llm, vector_store, docs = process_urls(
-                    st.session_state.urls_to_process
-                )
-
+                document = scrape_urls(st.session_state.urls_to_process)
+                llm, vector_store, docs = process_data(document)
                 st.session_state.llm = llm
                 st.session_state.vector_store = vector_store
                 st.session_state.docs = docs
