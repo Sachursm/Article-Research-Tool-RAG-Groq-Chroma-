@@ -8,6 +8,9 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_classic.chains import RetrievalQA
 from langchain_core.prompts import PromptTemplate
 from uuid import uuid4
+from langchain_core.document import Document
+from playwright.sync_api import sync_playwright
+import asyncio
 
 load_dotenv()
 
@@ -22,7 +25,7 @@ CUSTOM_PROMPT = PromptTemplate(
     input_variables=["context", "question"],
     template="""
 You are a helpful article research assistant.
-
+Look carefully through ALL the context provided.
 Use ONLY the information from the article below to answer the question.
 If the answer is not present, say you don't know.
 
@@ -41,7 +44,7 @@ SUMMARY_PROMPT = PromptTemplate(
     input_variables=["context"],
     template="""
 You are a helpful article research assistant.
-
+Look carefully through ALL the context provided.
 Provide a clear and structured summary
 of the article below.
 
@@ -81,7 +84,44 @@ def get_vector_store():
     )
 
 
-def process_urls(urls):
+async def scrape_with_playwright(url: str) -> Document:
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        
+        # Wait for JS to fully render
+        await page.goto(url, wait_until="networkidle")
+        
+        # Get full rendered content
+        content = await page.inner_text("body")
+        
+        await browser.close()
+        
+        return Document(
+            page_content=content,
+            metadata={"source": url}
+        )
+
+def scrape_urls(urls:list) -> list:
+  result = []
+  for url in urls:
+    loader = WebBaseLoader(
+        web_paths=[url],
+        header_template={"User-Agent": "Mozilla/5.0"}
+    )
+    data = loader.load()
+    if len(data[0].page_content) < 500:
+      doc = asyncio.run(scrape_with_playwright(url))
+      result.append(doc)
+    else:
+      doc = Document(
+          page_content=data[0].page_content,
+          metadata= data[0].metadata
+      )
+      result.append(doc)
+  return result
+
+def process_data(document: list):
     """
     Scrape web pages, split into chunks, store in Chroma DB.
     Returns the initialized (llm, vector_store) tuple for session storage.
@@ -95,20 +135,13 @@ def process_urls(urls):
     except Exception:
         pass
 
-    print("Loading data...")
-    loader = WebBaseLoader(
-        web_paths=urls,
-        header_template={"User-Agent": "Mozilla/5.0"}
-    )
-    data = loader.load()
-
     print("Splitting text...")
     text_splitter = RecursiveCharacterTextSplitter(
         separators=["\n\n", "\n", ".", " "],
         chunk_size=CHUNK_SIZE,
         chunk_overlap=100,
     )
-    docs = text_splitter.split_documents(data)
+    docs = text_splitter.split_documents(document)
 
     print("Adding docs to vector DB...")
     uuids = [str(uuid4()) for _ in docs]
