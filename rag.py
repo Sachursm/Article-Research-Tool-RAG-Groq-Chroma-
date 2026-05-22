@@ -27,6 +27,7 @@ CUSTOM_PROMPT = PromptTemplate(
 You are a helpful article research assistant.
 Look carefully through ALL the context provided.
 Use ONLY the information from the article below to answer the question.
+If the question asks for a full form or abbreviation, look carefully for the expanded term in the context.
 If the answer is not present, say you don't know.
 
 Context
@@ -45,6 +46,7 @@ SUMMARY_PROMPT = PromptTemplate(
     template="""
 You are a helpful article research assistant.
 Look carefully through ALL the context provided.
+If the question asks for a full form or abbreviation, look carefully for the expanded term in the context.
 Provide a clear and structured summary
 of the article below.
 
@@ -190,7 +192,8 @@ def generate_answer(query, llm, vector_store, docs):
     chain = RetrievalQA.from_chain_type(
         llm=llm,
         retriever=vector_store.as_retriever(
-            search_kwargs={"k": 6}
+            search_type="mmr",
+            search_kwargs={"k": 8, "fetch_k": 20}
         ),
         chain_type="stuff",
         return_source_documents=True,
