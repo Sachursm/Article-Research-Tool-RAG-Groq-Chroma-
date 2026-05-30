@@ -109,7 +109,7 @@ with col2:
                 
                 step2 = st.empty()
                 step2.write("✂️ Chunking & Embedding...")
-                llm, vector_store, docs, section_id = process_data(document, st.session_state.session_id)
+                llm, vector_store, docs = process_data(document, st.session_state.session_id)
                 bar.progress(75) 
                 step2.write("✅ Chunking & Embedding... Done!")
 
@@ -118,7 +118,6 @@ with col2:
                 st.session_state.llm = llm
                 st.session_state.vector_store = vector_store
                 st.session_state.docs = docs
-                st.session_state.section_id = section_id
                 bar.progress(100) 
                 step3.write("✅ Saving to memory... Done!") 
 
