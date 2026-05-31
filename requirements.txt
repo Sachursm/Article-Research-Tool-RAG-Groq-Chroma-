@@ -16,3 +16,4 @@ playwright
 pypdf
 youtube-transcript-api
 pytube
+langchain-experimental

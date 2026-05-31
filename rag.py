@@ -15,6 +15,8 @@ import pypdf
 import re
 from youtube_transcript_api import YouTubeTranscriptApi
 from pytube import YouTube
+from langchain_experimental.text_splitter import SemanticChunker
+from langchain_text_splitters import Language
 
 load_dotenv()
 
@@ -201,11 +203,89 @@ def extract_txt(files: list) -> list:
                               metadata={"source": file.name}))
     return result
 
+def extract_content_types(doc: Document):
+    content = doc.page_content
+    source  = doc.metadata.get("source", "")
+    code_docs = []   
+    table_docs = []
+
+    # Step 1 — code blocks
+    code_pattern = r"```[\s\S]*?```"
+    code_blocks = re.findall(code_pattern, content)
+    clean_text = re.sub(code_pattern, "[CODE BLOCK]", content)
+
+    for block in code_blocks:
+        code_docs.append(Document(          # ← 4 spaces
+            page_content=block,
+            metadata={"source": source, "type": "code"}
+        ))
+
+    # Step 2 — tables
+    table_pattern = r"(\|.+\|\n)+"
+    table_blocks = re.findall(table_pattern, content)
+    clean_text = re.sub(table_pattern, "[TABLE]", clean_text)
+
+    for table in table_blocks:
+        table_docs.append(Document(         # ← 4 spaces
+            page_content=table,
+            metadata={"source": source, "type": "table"}
+        ))
+
+    # Step 3 — remaining text
+    text_doc = Document(
+        page_content=clean_text,
+        metadata={"source": source, "type": "text"}
+    )
+
+    return code_docs, table_docs, text_doc
+
+
+
+
+
+def chunk_documents(documents: list, embeddings) -> list:
+    result = []
+
+    semantic_splitter = SemanticChunker(
+        embeddings,
+        breakpoint_threshold_type="percentile"
+    )
+    code_splitter = RecursiveCharacterTextSplitter.from_language(
+        language=Language.PYTHON,
+        chunk_size=500,
+        chunk_overlap=50
+    )
+    fallback_splitter = RecursiveCharacterTextSplitter(
+        separators=["\n\n", "\n", ". ", " "],
+        chunk_size=500,
+        chunk_overlap=100
+    )
+
+    for doc in documents:
+        # Step 1 — separate content types
+        code_docs, table_docs, text_doc = extract_content_types(doc)
+
+        # Step 2 — text → SemanticChunker
+        try:
+            text_chunks = semantic_splitter.split_documents([text_doc])
+            if not text_chunks:
+                raise ValueError("Empty")
+        except Exception:
+            text_chunks = fallback_splitter.split_documents([text_doc])
+        result.extend(text_chunks)
+
+        # Step 3 — code → language aware splitter
+        if code_docs:
+            code_chunks = code_splitter.split_documents(code_docs)
+            result.extend(code_chunks)
+
+        # Step 4 — tables → no splitting, add directly
+        result.extend(table_docs)
+
+    return result
+
+
 def process_data(document: list, session_id: str):
-    """
-    Scrape web pages, split into chunks, store in Chroma DB.
-    Returns the initialized (llm, vector_store) tuple for session storage.
-    """
     print("Initializing components...")
     llm = get_llm()
     embeddings = get_embeddings()
@@ -216,32 +296,14 @@ def process_data(document: list, session_id: str):
     except Exception:
         pass
 
-    print("Splitting text...")
-    all_docs = []
+    print("Chunking documents...")
+    all_docs = chunk_documents(document, embeddings)  # ← new
 
-    for doc in document:
-        # YouTube transcript → smaller chunks for precise retrieval
-        if doc.metadata.get("title"):
-            splitter = RecursiveCharacterTextSplitter(
-                separators=["\n\n", "\n", ". ", " "],
-                chunk_size=300,     # ← smaller for videos
-                chunk_overlap=50,
-            )
-        else:
-            # Articles, PDFs, TXT → normal chunks
-            splitter = RecursiveCharacterTextSplitter(
-                separators=["\n\n", "\n", ". ", " "],
-                chunk_size=CHUNK_SIZE,
-                chunk_overlap=100,
-            )
-        chunks = splitter.split_documents([doc])
-        all_docs.extend(chunks)
-
-    print("Adding docs to vector DB...")
+    print(f"Adding {len(all_docs)} chunks to vector DB...")
     uuids = [str(uuid4()) for _ in all_docs]
     vector_store.add_documents(all_docs, ids=uuids)
 
-    print(f"Stored {len(all_docs)} chunks")
+    print(f"✅ Stored {len(all_docs)} chunks")
     return llm, vector_store, all_docs
 
 
