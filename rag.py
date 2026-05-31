@@ -28,19 +28,26 @@ EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"
 CUSTOM_PROMPT = PromptTemplate(
     input_variables=["context", "question"],
     template="""
-You are a helpful article research assistant.
-Look carefully through ALL the context provided.
-Use ONLY the information from the article below to answer the question.
-If the question asks for a full form or abbreviation, look carefully for the expanded term in the context.
+You are a helpful research assistant analyzing content from articles and videos.
+Use ONLY the information from the context below to answer.
 If the answer is not present, say you don't know.
 
-Context
+Structure your response exactly like this:
+
+**Answer**
+[Direct one line answer]
+
+**Explanation**
+[Detailed explanation from the context]
+
+**Evidence**
+[Exact quote from the context supporting the answer]
+
+Context:
 =======
 {context}
 
 Question: {question}
-
-Answer:
 """
 )
 
@@ -174,7 +181,7 @@ def scrape_urls(urls: list) -> list:
                 )
                 result.append(doc)
     return result
-    
+
 def extract_pdf(files: list)-> list:
     result = []
     for file in files:
@@ -210,19 +217,32 @@ def process_data(document: list, session_id: str):
         pass
 
     print("Splitting text...")
-    text_splitter = RecursiveCharacterTextSplitter(
-        separators=["\n\n", "\n", ".", " "],
-        chunk_size=CHUNK_SIZE,
-        chunk_overlap=50,
-    )
-    docs = text_splitter.split_documents(document)
+    all_docs = []
+
+    for doc in document:
+        # YouTube transcript → smaller chunks for precise retrieval
+        if doc.metadata.get("title"):
+            splitter = RecursiveCharacterTextSplitter(
+                separators=["\n\n", "\n", ". ", " "],
+                chunk_size=300,     # ← smaller for videos
+                chunk_overlap=50,
+            )
+        else:
+            # Articles, PDFs, TXT → normal chunks
+            splitter = RecursiveCharacterTextSplitter(
+                separators=["\n\n", "\n", ". ", " "],
+                chunk_size=CHUNK_SIZE,
+                chunk_overlap=100,
+            )
+        chunks = splitter.split_documents([doc])
+        all_docs.extend(chunks)
 
     print("Adding docs to vector DB...")
-    uuids = [str(uuid4()) for _ in docs]
-    vector_store.add_documents(docs, ids=uuids)
+    uuids = [str(uuid4()) for _ in all_docs]
+    vector_store.add_documents(all_docs, ids=uuids)
 
-    print(f"Stored {len(docs)} chunks")
-    return llm, vector_store, docs
+    print(f"Stored {len(all_docs)} chunks")
+    return llm, vector_store, all_docs
 
 
 def generate_answer(query, llm, vector_store, docs):
