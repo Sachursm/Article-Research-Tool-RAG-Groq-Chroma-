@@ -12,7 +12,7 @@ def generate_summary(docs, llm):
     formatted_prompt = SUMMARY_PROMPT.format(context=context)
     response = llm.invoke(formatted_prompt)
     return response.content
-    
+
 def generate_answer(query, llm, vector_store, docs):
     """
     Generate answer or summary from article.
@@ -71,10 +71,69 @@ def generate_answer(query, llm, vector_store, docs):
 
 # 3 new functions for multi-document comparison
 def get_retriever_for_source(vector_store, source_name: str):
-    # your code here
+    return vector_store.as_retriever(
+        search_type="mmr",
+        search_kwargs={
+            "k": 8,
+            "fetch_k": 20,
+            "filter": {"source": source_name}
+        }
+    )
 
 def generate_per_source_answer(query, llm, vector_store, all_sources: list):
-    # your code here
+    answers = {}
+    for source in all_sources:
+        # Step 1 — get retriever for this source only
+        retriever = get_retriever_for_source(vector_store, source)
+
+        # Step 2 — create chain with that retriever
+        chain = RetrievalQA.from_chain_type(
+            llm=llm,
+            retriever=retriever,
+            chain_type="stuff",
+            return_source_documents=True,
+            chain_type_kwargs={"prompt": CUSTOM_PROMPT}
+        )
+
+        # Step 3 — invoke chain and store answer
+        result = chain.invoke({"query": query})
+        answers[source] = result["result"]
+
+    return answers  # dict: {source_name: answer}
 
 def compare_sources(query, llm, vector_store, all_sources: list):
-    # your code here
+    
+    # Step 1 — get answer from each source
+    per_source = generate_per_source_answer(
+        query, llm, vector_store, all_sources
+    )
+
+    # Step 2 — build comparison context
+    comparison_context = ""
+    for i, (source, answer) in enumerate(per_source.items(), 1):
+        comparison_context += f"Source {i} ({source}):\n{answer}\n\n"
+
+    # Step 3 — build comparison prompt
+    comparison_prompt = f"""
+You are a research assistant comparing multiple sources.
+Below are answers from different sources on the same question.
+
+{comparison_context}
+
+Question: {query}
+
+Compare these sources and structure your response as:
+
+**Points they agree on:**
+[list common points]
+
+**Points they disagree on:**
+[list differences]
+
+**Unique insights:**
+[what each source says that others don't]
+"""
+
+    # Step 4 — invoke LLM with comparison prompt
+    response = llm.invoke(comparison_prompt)
+    return response.content
