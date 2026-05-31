@@ -19,6 +19,8 @@ defaults = {
     "url1": "",
     "url2": "",
     "url3": "",
+    "uploaded_pdfs": [],
+    "uploaded_txts": [],
     "answer": None,
     "sources": None,
     "llm": None,           # ✅ persist LLM
@@ -34,69 +36,62 @@ st.title("📰 Article Research Tool")
 col1, col2 = st.columns([1, 2])
 
 with col1:
-    st.subheader("Article URLs")
+    st.subheader("Your Selections")
+    st.caption("Add URLs, text files, or PDF documents to use as context.")
 
-    # Track number of URL fields
-    if "url_count" not in st.session_state:
-        st.session_state.url_count = 3
+    # URLs section
+    with st.expander(f"🌐 Selected URLs ({len(st.session_state.urls_to_process)})", expanded=True):
+        if st.session_state.urls_to_process:
+            for url in st.session_state.urls_to_process:
+                st.text(url)
+        else:
+            st.caption("No URLs added yet.")
 
-    # Render URL inputs dynamically
-    for i in range(1, st.session_state.url_count + 1):
-        key = f"url{i}"
-        if key not in st.session_state:
-            st.session_state[key] = ""
-        st.text_input(f"URL {i}", key=key)
+    # TXT section
+    with st.expander(f"📝 Selected Text Files ({len(st.session_state.uploaded_txts)})", expanded=True):
+        if st.session_state.uploaded_txts:
+            for file in st.session_state.uploaded_txts:
+                st.text(file.name)
+        else:
+            st.caption("No text files added yet.")
 
-    # Add URL button
-    if st.button("➕ Add URL"):
-        st.session_state.url_count += 1
-        st.rerun()
+    # PDF section
+    with st.expander(f"📄 Selected PDF Files ({len(st.session_state.uploaded_pdfs)})", expanded=True):
+        if st.session_state.uploaded_pdfs:
+            for file in st.session_state.uploaded_pdfs:
+                st.text(file.name)
+        else:
+            st.caption("No PDF files added yet.")
 
     st.divider()
-
-    # Collect all non-empty URLs
-    urls = list(set(
-        st.session_state[f"url{i}"]
-        for i in range(1, st.session_state.url_count + 1)
-        if st.session_state.get(f"url{i}", "").strip()
-    ))
-
-    if st.button("Process URLs"):
-        if not urls:
-            st.error("Please enter at least one URL.")
-        else:
-            st.session_state.processing = True
-            st.session_state.urls_processed = False
-            st.session_state.logs = []
-            st.session_state.urls_to_process = urls
-            st.session_state.answer = None
-            st.session_state.sources = None
-            st.session_state.llm = None
-            st.session_state.vector_store = None
-            st.session_state.docs = None
-            st.rerun()
-
-    if st.button("Remove URLs"):
-        # Clear all dynamic URL fields
+    st.button("🗑️ Remove Data")
+    if st.button("🗑️ Remove Data"):
+        # Clear URL fields
         for i in range(1, st.session_state.url_count + 1):
             key = f"url{i}"
             if key in st.session_state:
                 del st.session_state[key]
-        st.session_state.session_id = str(uuid.uuid4())  
-        st.session_state.url_count = 3  # reset back to 3
+        
+        # Reset session
+        st.session_state.session_id = str(uuid.uuid4())
+        st.session_state.url_count = 3
         st.session_state.urls_processed = False
         st.session_state.processing = False
         st.session_state.logs = []
         st.session_state.urls_to_process = []
+        
+        # Also clear new file uploads
+        st.session_state.uploaded_pdfs = []
+        st.session_state.uploaded_txts = []
+        
         st.session_state.answer = None
         st.session_state.sources = None
         st.session_state.llm = None
         if st.session_state.vector_store is not None:
-            st.session_state.vector_store.delete_collection()  
+            st.session_state.vector_store.delete_collection()
         st.session_state.vector_store = None
         st.session_state.docs = None
         st.rerun()
-
 with col2:
 
     if st.session_state.processing:
