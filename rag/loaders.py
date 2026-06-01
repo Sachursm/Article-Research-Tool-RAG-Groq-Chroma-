@@ -47,15 +47,29 @@ def get_video_title(url: str) -> str:
     except Exception:
         return url 
 
+# get clean transcript by removing filler words
+def clean_transcript(text: str) -> str:
+    # Remove filler words
+    fillers = r'\b(um|uh|like|you know|basically|so basically|right|okay|actually)\b'
+    text = re.sub(fillers, '', text, flags=re.IGNORECASE)
+
+    # Fix spacing
+    text = re.sub(r' +', ' ', text)
+
+    # Add periods at natural breaks
+    text = re.sub(r'([a-z]) ([A-Z])', r'\1. \2', text)
+
+    return text.strip()
+
 # To get the transcript of youtube video
 def get_transcript(video_id):
     try:
         api = YouTubeTranscriptApi()
         transcript = api.fetch(video_id)
-        return " ".join([t.text for t in transcript])
+        raw_text = " ".join([t.text for t in transcript])
+        return clean_transcript(raw_text)  
     except Exception as e:
         raise ValueError(f"Could not get transcript: {e}")
-
 
 # Main function to scrape urls 
 def scrape_urls(urls: list) -> list:
