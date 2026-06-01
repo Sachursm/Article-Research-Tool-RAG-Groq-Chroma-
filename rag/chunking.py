@@ -65,13 +65,21 @@ def chunk_documents(documents: list, embeddings) -> list:
         # Step 1 — separate content types
         code_docs, table_docs, text_doc = extract_content_types(doc)
 
-        # Step 2 — text → SemanticChunker
-        try:
-            text_chunks = semantic_splitter.split_documents([text_doc])
-            if not text_chunks:
-                raise ValueError("Empty")
-        except Exception:
+        # Step 2 — text chunking based on source type
+        source = doc.metadata.get("source", "")
+        is_file = not source.startswith("http")
+
+        if is_file:
+            # PDF/TXT → fast RecursiveCharacterTextSplitter
             text_chunks = fallback_splitter.split_documents([text_doc])
+        else:
+            # URL/YouTube → SemanticChunker
+            try:
+                text_chunks = semantic_splitter.split_documents([text_doc])
+                if not text_chunks:
+                    raise ValueError("Empty")
+            except Exception:
+                text_chunks = fallback_splitter.split_documents([text_doc])
         result.extend(text_chunks)
 
         # Step 3 — code → language aware splitter
