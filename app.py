@@ -4,7 +4,7 @@ import uuid
 st.set_page_config(page_title="Article Research Tool", layout="wide")
 
 try:
-    from rag import scrape_urls, process_data, generate_answer, VECTORSTORE_DIR, extract_pdf, extract_txt
+    from rag import scrape_urls, process_data, generate_answer, generate_per_source_answer, compare_sources, VECTORSTORE_DIR, extract_pdf, extract_txt
 except Exception as e:
     st.error(f"RAG import failed: {e}")
     st.stop()
@@ -19,10 +19,11 @@ defaults = {
     "urls_to_process": [],
     "uploaded_pdfs": [],
     "uploaded_txts": [],
+    "all_sources": [],
     "answer": None,
     "sources": None,
-    "llm": None,           # ✅ persist LLM
-    "vector_store": None,  # ✅ persist vector store
+    "llm": None,
+    "vector_store": None,
     "docs": None
 }
 for k, v in defaults.items():
@@ -68,9 +69,10 @@ with col1:
         st.session_state.urls_processed = False
         st.session_state.processing = False
         st.session_state.logs = []
-        st.session_state.urls_to_process = []       # ← just clear the list
+        st.session_state.urls_to_process = []
         st.session_state.uploaded_pdfs = []
         st.session_state.uploaded_txts = []
+        st.session_state.all_sources = []
         st.session_state.answer = None
         st.session_state.sources = None
         st.session_state.llm = None
@@ -79,10 +81,11 @@ with col1:
         st.session_state.vector_store = None
         st.session_state.docs = None
         st.rerun()
+
 with col2:
 
     if st.session_state.processing:
-        
+
         bar = st.progress(0)
         with st.status("⚙️ Processing....", expanded=True) as status:
             try:
@@ -118,6 +121,13 @@ with col2:
                 st.session_state.llm = llm
                 st.session_state.vector_store = vector_store
                 st.session_state.docs = docs
+
+                # Collect all sources
+                all_sources = list(st.session_state.urls_to_process)
+                all_sources += [f.name for f in st.session_state.uploaded_pdfs]
+                all_sources += [f.name for f in st.session_state.uploaded_txts]
+                st.session_state.all_sources = all_sources
+
                 bar.progress(100)
                 step4.write("✅ Saving to memory... Done!")
                 status.update(label="✅ Complete!", state="complete")
@@ -135,6 +145,12 @@ with col2:
         st.success("✅ Data processed! Ask your question below.")
         st.subheader("Ask a Question")
 
+        mode = st.radio(
+            "Answer mode:",
+            ["Single Answer", "Per Source", "Compare Sources"],
+            horizontal=True
+        )
+
         question = st.text_input("Enter your question", key="question_box")
 
         if st.button("Ask"):
@@ -142,39 +158,70 @@ with col2:
                 st.warning("Please enter a question.")
             else:
                 with st.spinner("Generating answer..."):
-                    # ✅ Pass components from session state
                     try:
-                        answer, sources = generate_answer(
-                            question,
-                            st.session_state.llm,
-                            st.session_state.vector_store,
-                            st.session_state.docs
-                        )
+                        if mode == "Single Answer":
+                            answer, sources = generate_answer(
+                                question,
+                                st.session_state.llm,
+                                st.session_state.vector_store,
+                                st.session_state.docs
+                            )
+                            st.session_state.answer = answer
+                            st.session_state.sources = sources
 
-                        st.session_state.answer = answer
-                        st.session_state.sources = sources
+                        elif mode == "Per Source":
+                            if len(st.session_state.all_sources) < 2:
+                                st.warning("Add at least 2 sources for per source answers.")
+                            else:
+                                answers = generate_per_source_answer(
+                                    question,
+                                    st.session_state.llm,
+                                    st.session_state.vector_store,
+                                    st.session_state.all_sources
+                                )
+                                st.session_state.answer = answers
+                                st.session_state.sources = ""
+
+                        elif mode == "Compare Sources":
+                            if len(st.session_state.all_sources) < 2:
+                                st.warning("Add at least 2 sources to compare.")
+                            else:
+                                comparison = compare_sources(
+                                    question,
+                                    st.session_state.llm,
+                                    st.session_state.vector_store,
+                                    st.session_state.all_sources
+                                )
+                                st.session_state.answer = comparison
+                                st.session_state.sources = ", ".join(st.session_state.all_sources)
 
                     except Exception as e:
                         st.error(f"Answer generation failed: {e}")
-                    
 
-        # Replace your sources section with this:
+        # Display answer
         if st.session_state.answer:
-            st.subheader("Answer")
-            st.markdown(st.session_state.answer)
-
-            st.subheader("Sources")
-            sources = st.session_state.sources
-            if sources and sources.strip():
-                source_list = [s.strip() for s in sources.split(",") if s.strip()]
-                for i, source in enumerate(source_list, 1):
-                    # Check if it's a URL or a filename
-                    if source.startswith("http"):
-                        st.markdown(f"{i}. [{source}]({source})")
-                    else:
-                        st.markdown(f"{i}. 📄 {source}")  # just show filename, no link
+            if isinstance(st.session_state.answer, dict):
+                # Per Source mode
+                for source, answer in st.session_state.answer.items():
+                    st.subheader(f"📄 {source}")
+                    st.markdown(answer)
+                    st.divider()
             else:
-                st.info("No sources found.")
+                # Single Answer or Compare Sources mode
+                st.subheader("Answer")
+                st.markdown(st.session_state.answer)
+
+                st.subheader("Sources")
+                sources = st.session_state.sources
+                if sources and sources.strip():
+                    source_list = [s.strip() for s in sources.split(",") if s.strip()]
+                    for i, source in enumerate(source_list, 1):
+                        if source.startswith("http"):
+                            st.markdown(f"{i}. [{source}]({source})")
+                        else:
+                            st.markdown(f"{i}. 📄 {source}")
+                else:
+                    st.info("No sources found.")
 
     else:
         st.info("ℹ️ Add multiple Article URLs, YouTube URLs, text files (.txt), and PDF documents.")
@@ -182,7 +229,6 @@ with col2:
         # ── URL Section ──────────────────────────────
         st.subheader("🌐 Article or YouTube URLs")
 
-        # Input for new URL
         new_url = st.text_input("Enter URL", placeholder="https://...", key="new_url_input")
 
         if st.button("➕ Add URL"):
@@ -195,7 +241,6 @@ with col2:
             else:
                 st.warning("Please enter a URL first.")
 
-        # Show added URLs with remove button
         if st.session_state.urls_to_process:
             for i, url in enumerate(st.session_state.urls_to_process):
                 col_url, col_del = st.columns([10, 1])
@@ -207,6 +252,8 @@ with col2:
                         st.rerun()
         else:
             st.caption("No URLs added yet.")
+
+        st.divider()
 
         # ── TXT Section ──────────────────────────────
         st.subheader("📝 Text Files (.txt)")
@@ -235,7 +282,6 @@ with col2:
         st.divider()
 
         # ── Process Button ────────────────────────────
-
         if st.button("▶ Process Data"):
             if not st.session_state.urls_to_process and not st.session_state.uploaded_txts and not st.session_state.uploaded_pdfs:
                 st.error("Please add at least one URL or upload a file.")
