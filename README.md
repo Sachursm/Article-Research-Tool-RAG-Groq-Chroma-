@@ -23,6 +23,22 @@ pinned: false
 
 ---
 
+## 📸 Screenshots
+
+### Upload Data
+![Upload UI](images/front_ui.png)
+
+### Processing
+![Processing UI](images/processing_ui.png)
+
+### Single Answer
+![Single Answer](images/single_mode.png)
+
+### Compare Sources
+![Compare Sources](images/compare_mode.png)
+
+---
+
 ## ✨ Features
 
 ### Data Sources
@@ -240,7 +256,7 @@ Resume analysis:
 YouTube research:
 → Add a tutorial video URL
 → Ask specific questions about the content
-→ Get timestamped evidence quotes
+→ Get answer with evidence quotes
 
 Mixed research:
 → Article URL + PDF + YouTube video
