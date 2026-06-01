@@ -8,67 +8,98 @@ app_port: 8501
 pinned: false
 ---
 
-
 # 📰 Article Research Tool
 
-> A Retrieval-Augmented Generation (RAG) web application that ingests real-estate news articles from URLs and enables grounded question-answering using Groq's Llama-3.3-70B and a local Chroma vector database — all through a clean Streamlit interface.
+> A production-grade Retrieval-Augmented Generation (RAG) web application that ingests content from multiple sources — article URLs, YouTube videos, PDFs, and TXT files — and enables intelligent question answering, per-source analysis, and multi-document comparison using Groq's Llama-3.3-70B and ChromaDB.
+
+🔴 **[Live Demo](https://huggingface.co/spaces/sachuretnasm/article-research-tool)**
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square&logo=python)
 ![Streamlit](https://img.shields.io/badge/Streamlit-UI-red?style=flat-square&logo=streamlit)
 ![LangChain](https://img.shields.io/badge/LangChain-Framework-green?style=flat-square)
 ![Groq](https://img.shields.io/badge/Groq-Llama--3.3--70B-orange?style=flat-square)
 ![ChromaDB](https://img.shields.io/badge/Chroma-VectorDB-purple?style=flat-square)
+![Docker](https://img.shields.io/badge/Docker-Containerized-blue?style=flat-square&logo=docker)
 
 ---
 
 ## ✨ Features
 
-- 📄 **URL Ingestion** — Load real-estate news articles directly from URLs
-- 🔎 **Semantic Search** — Retrieve relevant context using Chroma vector database
-- 🧠 **Grounded Answers** — Context-aware responses powered by Groq Llama-3.3-70B
-- 📚 **Source Citations** — Every answer includes source references
-- 🖥️ **Interactive UI** — Clean and responsive Streamlit interface
-- 💾 **Persistent Vector Store** — Local Chroma DB persists across sessions
-- 🚫 **No Paid Embedding APIs** — Uses local Sentence-Transformers MiniLM for embeddings
+### Data Sources
+- 🌐 **Article URLs** — Scrape any web article with automatic JS rendering fallback via Playwright
+- 🎥 **YouTube Videos** — Extract and research video transcripts automatically
+- 📄 **PDF Documents** — Upload and query PDF files
+- 📝 **Text Files** — Upload and query TXT files
+- 🔀 **Mixed Sources** — Combine any sources together in one research session
+
+### RAG Pipeline
+- 🧠 **Content-Aware Chunking** — Semantic chunking for articles, language-aware for code blocks, preserved for tables
+- 🎯 **BGE Large Embeddings** — High quality semantic search using `BAAI/bge-large-en-v1.5`
+- 🔍 **MMR Retrieval** — Maximal Marginal Relevance for diverse, relevant chunks
+- 📊 **Structured Answers** — Every answer includes Answer, Explanation, and Evidence sections
+
+### Answer Modes
+- 💬 **Single Answer** — Combined answer from all sources
+- 📑 **Per Source** — Separate answer from each source independently
+- ⚖️ **Compare Sources** — AI comparison of agreements, disagreements, and unique insights
+
+### Production Features
+- 👥 **Multi-User Isolation** — Each user gets their own vectorstore session
+- 📈 **Progress Tracking** — Real-time step-by-step progress bar
+- 🐳 **Docker Deployment** — Fully containerized for consistent deployment
+- ⚡ **Cached Embeddings** — Model loaded once shared across all users
 
 ---
 
 ## 🧱 Architecture
 
 ```
-URLs Provided by User
-        │
-        ▼
-  Web Article Loader
-        │
-        ▼
-  Recursive Text Splitter
-        │
-        ▼
-  Sentence-Transformer Embeddings (MiniLM)
-        │
-        ▼
-  Chroma Vector Database  ◄────────────────────┐
-        │                                       │
-        ▼                                       │
-  User Question ──► Semantic Retriever ─────────┘
-                          │
-                          ▼
-                   Prompt Template
-                          │
-                          ▼
-               Groq LLM (Llama-3.3-70B)
-                          │
-                          ▼
-              Answer + Source Citations
+User Input (URL / YouTube / PDF / TXT)
+              │
+              ▼
+    ┌─────────────────────┐
+    │     loaders.py      │
+    │  WebBaseLoader      │
+    │  Playwright (JS)    │
+    │  YouTube Transcript │
+    │  PDF/TXT Reader     │
+    └─────────┬───────────┘
+              │
+              ▼
+    ┌─────────────────────┐
+    │     chunking.py     │
+    │  extract_content_   │
+    │  types()            │
+    │  ├── Code Blocks    │
+    │  ├── Tables         │
+    │  └── Text           │
+    │                     │
+    │  chunk_documents()  │
+    │  ├── SemanticChunker│
+    │  ├── Code Splitter  │
+    │  └── Fast Splitter  │
+    └─────────┬───────────┘
+              │
+              ▼
+    ┌─────────────────────┐
+    │   vectorstore.py    │
+    │  BGE Large Embed    │
+    │  ChromaDB Storage   │
+    │  Session Isolation  │
+    └─────────┬───────────┘
+              │
+              ▼
+    ┌─────────────────────┐
+    │    answering.py     │
+    │  MMR Retrieval      │
+    │  Single Answer      │
+    │  Per Source         │
+    │  Compare Sources    │
+    └─────────┬───────────┘
+              │
+              ▼
+    Structured Answer (Answer + Explanation + Evidence)
 ```
-## 🏗️ System Architecture
-
-### 🔵 Ingestion Pipeline
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Sachursm/RealEstate-Research-Tool-RAG-Groq-Chroma-/4ce9117d7d44d49dddb579b054e8f662d2844c0c/digram/rag_architecture.jpg" width="500">
-</p>
 
 ---
 
@@ -77,10 +108,14 @@ URLs Provided by User
 | Layer | Technology |
 |---|---|
 | **LLM** | Groq — Llama-3.3-70B |
-| **Embeddings** | Sentence-Transformers (all-MiniLM-L6-v2) |
-| **Vector Database** | ChromaDB (local, persistent) |
+| **Embeddings** | BAAI/bge-large-en-v1.5 |
+| **Vector Database** | ChromaDB |
 | **RAG Framework** | LangChain |
+| **Web Scraping** | Playwright, WebBaseLoader |
+| **YouTube** | youtube-transcript-api, pytube |
+| **PDF Processing** | pypdf |
 | **UI** | Streamlit |
+| **Deployment** | Docker, Hugging Face Spaces |
 | **Language** | Python 3.10+ |
 
 ---
@@ -88,13 +123,26 @@ URLs Provided by User
 ## 📂 Project Structure
 
 ```
-RAG_based_Real_estate_webapplication/
+article-research-tool/
 │
-├── app.py                  # Streamlit UI & session management
-├── RAG.py                  # RAG pipeline, retriever & QA chain
+├── app.py                    # Streamlit UI & session management
+├── rag/
+│   ├── __init__.py           # Package exports
+│   ├── config.py             # Constants & prompts
+│   ├── loaders.py            # Data loading (URL, YouTube, PDF, TXT)
+│   ├── chunking.py           # Content-aware chunking
+│   ├── vectorstore.py        # Embeddings & ChromaDB
+│   ├── pipeline.py           # process_data orchestration
+│   └── answering.py          # Answer generation & comparison
 ├── resources/
-│   └── vectorstore/        # Persistent Chroma DB (gitignored)
+│   └── vectorstore/          # ChromaDB storage (gitignored)
+├── .streamlit/
+│   └── config.toml           # Streamlit configuration
+├── .github/
+│   └── workflows/
+│       └── ping.yml          # HF Space keep-alive
 ├── requirements.txt
+├── Dockerfile
 └── README.md
 ```
 
@@ -105,11 +153,11 @@ RAG_based_Real_estate_webapplication/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Sachursm/RAG_based_Real_estate_webapplication.git
-cd RAG_based_Real_estate_webapplication
+git clone https://github.com/Sachursm/article-research-tool.git
+cd article-research-tool
 ```
 
-### 2. Create & Activate a Virtual Environment
+### 2. Create & Activate Virtual Environment
 
 ```bash
 python -m venv venv
@@ -125,6 +173,7 @@ venv\Scripts\activate
 
 ```bash
 pip install -r requirements.txt
+playwright install chromium
 ```
 
 ### 4. Set Your Groq API Key
@@ -147,92 +196,78 @@ Open your browser at: **http://localhost:8501**
 
 ---
 
-## 📸 Screenshots
+### 🐳 Run with Docker
 
-### 🖥️ Front UI
-![Front UI](https://github.com/Sachursm/RealEstate-Research-Tool-RAG-Groq-Chroma-/blob/4ce9117d7d44d49dddb579b054e8f662d2844c0c/images/font_ui.png)
-
-### ⚙️ Processing UI
-![Processing UI](https://github.com/Sachursm/RealEstate-Research-Tool-RAG-Groq-Chroma-/blob/4ce9117d7d44d49dddb579b054e8f662d2844c0c/images/processing_ui.png)
-
-### ✅ Output UI
-![Output UI](https://github.com/Sachursm/RealEstate-Research-Tool-RAG-Groq-Chroma-/blob/4ce9117d7d44d49dddb579b054e8f662d2844c0c/images/output_ui.png)
+```bash
+docker build -t article-research-tool .
+docker run -p 8501:8501 -e GROQ_API_KEY=your_key article-research-tool
+```
 
 ---
 
 ## 📖 How to Use
 
-1. **Enter URLs** — Paste one or more real-estate news article URLs into the sidebar
-2. **Process URLs** — Click the "Process URLs" button to ingest and embed the articles
-3. **Ask Questions** — Type your question in the main input field
-4. **Get Answers** — Receive grounded answers with source citations from the ingested articles
+### Step 1 — Add Sources
+- Paste article or YouTube URLs one by one
+- Upload PDF or TXT files
+- Mix any combination of sources
 
----
-## 🔗 Reference Article
+### Step 2 — Process Data
+- Click **▶ Process Data**
+- Watch real-time progress (Loading → Chunking → Embedding → Saving)
 
-### Understanding the Repo Rate and Its Impact on Home Loans
-
-![Repo Rate Concept](https://www.pnbhousing.com/blog/wp-content/uploads/2023/08/repo-rate-impact-home-loan.jpg)
-
-Source: https://www.pnbhousing.com/blog/understanding-the-repo-rate-and-its-impact-on-home-loans
-
----
-
-## ❓ Basic Understanding Questions
-
-1. What is the repo rate set by the Reserve Bank of India and why is it important?  
-2. How does a change in repo rate affect home loan interest rates?  
-3. What is the difference between fixed-rate and floating-rate home loans?  
-4. Why don’t home loan rates change immediately after RBI changes the repo rate?  
+### Step 3 — Ask Questions
+Choose your answer mode:
+- **Single Answer** — Best for one source or combined research
+- **Per Source** — See what each source says independently
+- **Compare Sources** — Find agreements, disagreements, unique insights
 
 ---
 
----
+## 💡 Example Use Cases
 
-## 📌 Key Implementation Details
+```
+Research comparison:
+→ Add 2-3 news articles on same topic
+→ Use Compare Sources mode
+→ See what each publication says differently
 
-- **Recursive Text Chunking** — Splits articles intelligently to preserve semantic context
-- **Custom RAG Prompt** — Engineered to minimize hallucination and enforce source grounding
-- **Persistent Chroma Store** — Vector embeddings survive app restarts
-- **Streamlit Session State** — Manages ingestion pipeline state cleanly across reruns
-- **Local Embeddings** — MiniLM runs fully on-device, no embedding API costs
+Resume analysis:
+→ Upload your PDF resume
+→ Ask "what is my experience?"
+→ Get structured answer with evidence
 
----
+YouTube research:
+→ Add a tutorial video URL
+→ Ask specific questions about the content
+→ Get timestamped evidence quotes
 
-## 🔮 Roadmap
-
-- [ ] Multi-article conversational memory
-- [ ] PDF & document upload support
-- [ ] Reranking layer for higher retrieval accuracy
-- [ ] Deployment to Streamlit Cloud
-- [ ] Support for additional LLM providers
-
----
-
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome! Feel free to open an issue or submit a pull request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Mixed research:
+→ Article URL + PDF + YouTube video
+→ Ask one question across all sources
+→ Get comprehensive answer
+```
 
 ---
 
-## 📄 License
+## 🔑 Key Implementation Details
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+- **Content-Aware Chunking** — Detects and separately handles code blocks, tables, and text
+- **Semantic Chunking** — Splits web articles by meaning, not character count
+- **Session Isolation** — Each user gets unique ChromaDB collection via UUID
+- **Playwright Fallback** — Automatically handles JavaScript-rendered websites
+- **Transcript Cleaning** — Removes filler words from YouTube transcripts
+- **Structured Prompts** — Engineered to always return Answer + Explanation + Evidence
 
 ---
 
 ## 👤 Author
 
-**Sachu Retna SM**
+**Sachu Retna SM** — AI/ML Engineer
 
 [![GitHub](https://img.shields.io/badge/GitHub-Sachursm-181717?style=flat-square&logo=github)](https://github.com/Sachursm)
+[![Email](https://img.shields.io/badge/Email-sachuretnasm@gmail.com-red?style=flat-square&logo=gmail)](mailto:sachuretnasm@gmail.com)
 
 ---
 
-<p align="center">Built with ❤️ using LangChain, Groq, ChromaDB & Streamlit</p>
+<p align="center">Built with ❤️ using LangChain, Groq, ChromaDB, Playwright & Streamlit</p>
